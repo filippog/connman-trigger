@@ -2,14 +2,14 @@
 package main
 
 import (
+	"flag"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"sort"
-	"syscall"
+	"strings"
 
 	"github.com/godbus/dbus/v5"
 )
@@ -20,7 +20,7 @@ type dbusConnection interface {
 }
 
 // Logger for the application
-var logger = log.New(os.Stdout, "connman-dispatcher: ", log.LstdFlags)
+var logger = log.New(os.Stdout, "", log.LstdFlags)
 
 // isExecutable checks if the file is executable
 func isExecutable(path string) bool {
@@ -34,7 +34,7 @@ func isExecutable(path string) bool {
 
 // executeScriptsInDir executes all executable scripts in a directory
 func executeScriptsInDir(dir string, state string, envVars map[string]string) {
-	files, err := ioutil.ReadDir(dir)
+	files, err := os.ReadDir(dir)
 	if err != nil {
 		logger.Printf("Error reading directory %s: %v\n", dir, err)
 		return
@@ -170,23 +170,36 @@ func listenForNetworkChanges(paths []string) {
 	}
 }
 
+// stringSlice implements flag.Value to collect multiple -p flags.
+type stringSlice []string
+
+// String returns the string representation of the collected flags.
+func (s *stringSlice) String() string {
+	return strings.Join(*s, ",")
+}
+
+// Set appends a new value to the stringSlice.
+func (s *stringSlice) Set(val string) error {
+	*s = append(*s, val)
+	return nil
+}
+
 func main() {
-	if len(os.Args) < 2 {
-		fmt.Printf("Usage: %s -p PATH\n", os.Args[0])
-		syscall.Exit(1)
+	var paths stringSlice
+	flag.Var(&paths, "p", "path to scripts directory; may be specified multiple times")
+
+	flag.Usage = func() {
+		fmt.Fprintf(os.Stderr, "Usage: %s -p PATH [-p PATH]...\n", os.Args[0])
+		flag.PrintDefaults()
 	}
 
-	paths := []string{}
-	for i, arg := range os.Args {
-		if arg == "-p" && i+1 < len(os.Args) {
-			paths = append(paths, os.Args[i+1])
-		}
-	}
+	flag.Parse()
 
 	if len(paths) == 0 {
-		fmt.Println("Error: No paths specified")
-		syscall.Exit(1)
+		fmt.Fprintln(os.Stderr, "Error: No paths specified")
+		flag.Usage()
+		os.Exit(1)
 	}
 
-	listenForNetworkChanges(paths)
+	listenForNetworkChanges([]string(paths))
 }

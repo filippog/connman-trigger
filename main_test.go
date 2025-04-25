@@ -2,16 +2,16 @@
 package main
 
 import (
-	"io/ioutil"
+	"context"
+	"errors"
 	"os"
 	"path/filepath"
-	"runtime"
 	"testing"
 )
 
 // TestIsExecutable verifies that isExecutable correctly identifies executable files
 func TestIsExecutable(t *testing.T) {
-	file, err := ioutil.TempFile("", "exe_test")
+	file, err := os.CreateTemp("", "exe_test")
 	if err != nil {
 		t.Fatalf("TempFile failed: %v", err)
 	}
@@ -34,11 +34,7 @@ func TestIsExecutable(t *testing.T) {
 
 // TestExecuteScriptsInDir verifies that executeScriptsInDir runs executable scripts
 func TestExecuteScriptsInDir(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("skipping script execution test on Windows")
-	}
-
-	dir, err := ioutil.TempDir("", "exec_test_dir")
+	dir, err := os.MkdirTemp("", "exec_test_dir")
 	if err != nil {
 		t.Fatalf("TempDir failed: %v", err)
 	}
@@ -47,7 +43,7 @@ func TestExecuteScriptsInDir(t *testing.T) {
 	outFile := filepath.Join(dir, "out.txt")
 	script := "#!/bin/sh\n\necho \"$1\" > \"$OUTFILE\"\n"
 	scriptPath := filepath.Join(dir, "script.sh")
-	if err := ioutil.WriteFile(scriptPath, []byte(script), 0644); err != nil {
+	if err := os.WriteFile(scriptPath, []byte(script), 0644); err != nil {
 		t.Fatalf("WriteFile failed: %v", err)
 	}
 	if err := os.Chmod(scriptPath, 0755); err != nil {
@@ -56,7 +52,7 @@ func TestExecuteScriptsInDir(t *testing.T) {
 
 	executeScriptsInDir(dir, "up", map[string]string{"OUTFILE": outFile})
 
-	data, err := ioutil.ReadFile(outFile)
+	data, err := os.ReadFile(outFile)
 	if err != nil {
 		t.Fatalf("ReadFile failed: %v", err)
 	}
