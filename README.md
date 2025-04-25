@@ -36,6 +36,8 @@ connectivity events.
 - Scripts run with the environment variables listed above.
 
 
-## License
+## Colophon
 
-This project is licensed under the Apache License 2.0. See the [LICENSE](LICENSE) file for details.
+This project is licensed under the Apache License 2.0. See the
+[LICENSE](LICENSE) file for details. It has been written with help from
+[codex](https://github.com/openai/codex).
